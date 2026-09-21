@@ -184,10 +184,6 @@ class SamplesGenerator:
                     # Dispatch replacement for filtered prompt.
                     new_prompts, new_labels, new_images, exhausted = _collect_prompt_batch(dataloader_iter, 1)
                     prompts_consumed += len(new_prompts)
-                    if exhausted and not new_prompts:
-                        for remaining_ref in pending_refs:
-                            ray.cancel(remaining_ref)
-                        return [], prompts_consumed, True
                     if new_prompts:
                         new_refs = self._dispatch_prompts_to_vllm(
                             new_prompts, new_labels, images=new_images, **generate_kwargs
@@ -207,7 +203,7 @@ class SamplesGenerator:
             max_tokens=generate_kwargs.get("max_new_tokens"),  # None = dynamic per-prompt
             min_tokens=generate_kwargs.get("min_new_tokens", 1),
             skip_special_tokens=generate_kwargs.get("skip_special_tokens", False),
-            logprobs=1 if self.args.algo.advantage.is_correction_enable else None,
+            logprobs=1 if self.args.algo.advantage.is_correction_level != "off" else None,
         )
         truncate_length = generate_kwargs.get("max_len", 2048)
         n_samples = generate_kwargs.get("n_samples_per_prompt", self.args.rollout.n_samples_per_prompt)
